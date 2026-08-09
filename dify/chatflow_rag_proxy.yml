@@ -1,0 +1,94 @@
+app:
+  description: Thin Dify proxy over CardLedger POST /rag/query. Retrieval stays in the self-hosted API.
+  icon: 📇
+  icon_background: "#E8EEF2"
+  mode: chat
+  name: CardLedger RAG Proxy
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: Ask who you need — e.g. West Coast payments / fund bridging. Backed by CardLedger hybrid RAG (synthetic demo data).
+    retriever_resource:
+      enabled: false
+    suggested_questions:
+      - Who on the US West Coast works on payments or fund bridging?
+      - Bay Area fund bridging contacts
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    edges:
+      - data:
+          isInIteration: false
+          sourceType: start
+          targetType: http-request
+        id: start-to-http
+        source: start
+        sourceHandle: source
+        target: http_rag
+        targetHandle: target
+        type: custom
+      - data:
+          isInIteration: false
+          sourceType: http-request
+          targetType: answer
+        id: http-to-answer
+        source: http_rag
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+    nodes:
+      - data:
+          title: Start
+          type: start
+          variables: []
+        id: start
+        position:
+          x: 80
+          y: 200
+        type: custom
+      - data:
+          title: CardLedger /rag/query
+          type: http-request
+          method: post
+          url: http://host.docker.internal:8000/rag/query
+          headers: "Content-Type:application/json"
+          params: ""
+          body:
+            type: json
+            data:
+              - key: query
+                type: mixed
+                value: "{{#sys.query#}}"
+              - key: top_k
+                type: mixed
+                value: "5"
+          timeout:
+            max_connect_timeout: 30
+            max_read_timeout: 60
+            max_write_timeout: 30
+        id: http_rag
+        position:
+          x: 360
+          y: 200
+        type: custom
+      - data:
+          title: Answer
+          type: answer
+          answer: "{{#http_rag.body#}}"
+        id: answer
+        position:
+          x: 680
+          y: 200
+        type: custom
+    viewport:
+      x: 0
+      y: 0
+      zoom: 1

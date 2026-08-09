@@ -1,0 +1,33 @@
+# Render: API only (frontend → GitHub Pages)
+# Public demo must stay synthetic-only.
+# Free tip: omit persistent disk; SQLite resets on redeploy and reseeds on boot.
+
+services:
+  - type: web
+    name: cardledger-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./cardrag.db
+      - key: DEMO_MODE
+        value: "true"
+      - key: DATA_CLASSIFICATION
+        value: synthetic_demo
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: CORS_ORIGINS
+        # Replace with your GitHub Pages origin after first Pages deploy, e.g.
+        # https://YOUR_USER.github.io,https://YOUR_USER.github.io/BusinessCardClassifier
+        value: "*"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: PYTHON_VERSION
+        value: "3.11.9"

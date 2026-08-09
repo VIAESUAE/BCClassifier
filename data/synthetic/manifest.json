@@ -1,0 +1,122 @@
+[
+  {
+    "file": "card_01_maya_chen.png",
+    "full_name": "Maya Chen",
+    "company": "HarborPay Labs",
+    "title": "VP Business Development",
+    "phone": "+1 (415) 555-0142",
+    "email": "maya.chen@harborpay.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "payments",
+      "fintech"
+    ],
+    "notes": "Focuses on merchant acquiring and cross-border checkout for mid-market SaaS."
+  },
+  {
+    "file": "card_02_jordan_blake.png",
+    "full_name": "Jordan Blake",
+    "company": "Pacific Bridge Capital",
+    "title": "Managing Partner",
+    "phone": "+1 (650) 555-0198",
+    "email": "j.blake@pacificbridge.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "fund bridging",
+      "venture capital"
+    ],
+    "notes": "Arranges short-term fund bridging between LPs and growth-stage fintechs in the Bay Area."
+  },
+  {
+    "file": "card_03_sofia_reyes.png",
+    "full_name": "Sofia Reyes",
+    "company": "Cascade Settlement Co.",
+    "title": "Head of Partnerships",
+    "phone": "+1 (206) 555-0117",
+    "email": "sofia.reyes@cascadesettle.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "payments",
+      "banking"
+    ],
+    "notes": "Seattle-based; payment rails and treasury settlement for marketplaces."
+  },
+  {
+    "file": "card_04_kenji_watanabe.png",
+    "full_name": "Kenji Watanabe",
+    "company": "Redwood Rails",
+    "title": "Founder & CEO",
+    "phone": "+1 (408) 555-0160",
+    "email": "kenji@redwoodrails.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "payments",
+      "fintech",
+      "fund bridging"
+    ],
+    "notes": "Builds liquidity bridges for payment companies expanding from APAC into California."
+  },
+  {
+    "file": "card_05_priya_nair.png",
+    "full_name": "Priya Nair",
+    "company": "Beacon Acquiring",
+    "title": "Director of Product",
+    "phone": "+1 (213) 555-0133",
+    "email": "priya.nair@beaconacq.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "payments"
+    ],
+    "notes": "LA office; card-not-present acquiring and fraud tooling."
+  },
+  {
+    "file": "card_06_ethan_cole.png",
+    "full_name": "Ethan Cole",
+    "company": "Hudson Ledger",
+    "title": "Partner",
+    "phone": "+1 (212) 555-0188",
+    "email": "ethan.cole@hudsonledger.example",
+    "timezone": "America/New_York",
+    "region": "US East Coast",
+    "tags": [
+      "fund bridging",
+      "venture capital"
+    ],
+    "notes": "NYC fund bridging \u2014 useful contrast so West Coast filters exclude him."
+  },
+  {
+    "file": "card_07_aisha_rahman.png",
+    "full_name": "Aisha Rahman",
+    "company": "NovaWire",
+    "title": "CTO",
+    "phone": "+1 (617) 555-0121",
+    "email": "aisha@novawire.example",
+    "timezone": "America/New_York",
+    "region": "US East Coast",
+    "tags": [
+      "payments",
+      "fintech"
+    ],
+    "notes": "Boston payments infrastructure; not West Coast."
+  },
+  {
+    "file": "card_08_lucas_meyer.png",
+    "full_name": "Lucas Meyer",
+    "company": "Golden Gate Treasury",
+    "title": "Relationship Manager",
+    "phone": "+1 (415) 555-0177",
+    "email": "lucas.meyer@ggtreasury.example",
+    "timezone": "America/Los_Angeles",
+    "region": "US West Coast",
+    "tags": [
+      "fund bridging",
+      "banking"
+    ],
+    "notes": "SF; connects corporate treasuries with bridge facilities for payment float."
+  }
+]
