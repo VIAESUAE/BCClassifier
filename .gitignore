@@ -17,3 +17,5 @@ pgdata/
 *.log
 cardrag.db
 backend/cardrag.db
+_upload_ready/
+BCClassifier-upload.zip

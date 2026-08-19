@@ -12,22 +12,33 @@ const form = reactive({
 })
 const savedMsg = ref('')
 const health = ref(null)
+const llmTest = ref(null)
 const testing = ref(false)
+const testingLlm = ref(false)
 const testError = ref('')
+const llmError = ref('')
 
 onMounted(() => {
   Object.assign(form, getClientSettings())
-  if (!form.openaiBaseUrl) form.openaiBaseUrl = 'https://api.openai.com/v1'
-  if (!form.model) form.model = 'gpt-4o-mini'
+  if (!form.openaiBaseUrl) form.openaiBaseUrl = 'https://openrouter.ai/api/v1'
+  if (!form.model) form.model = 'google/gemma-2-9b-it:free'
 })
+
+function applyOpenRouterPreset() {
+  form.openaiBaseUrl = 'https://openrouter.ai/api/v1'
+  if (!form.model || form.model.includes('gpt-4')) {
+    form.model = 'google/gemma-2-9b-it:free'
+  }
+}
 
 function save() {
   saveClientSettings(form)
   savedMsg.value = t.value.settingsSaved
   testError.value = ''
+  llmError.value = ''
 }
 
-async function testConnection() {
+async function testBackend() {
   save()
   testing.value = true
   testError.value = ''
@@ -38,6 +49,20 @@ async function testConnection() {
     testError.value = e.message || String(e)
   } finally {
     testing.value = false
+  }
+}
+
+async function testLlm() {
+  save()
+  testingLlm.value = true
+  llmError.value = ''
+  llmTest.value = null
+  try {
+    llmTest.value = await api.testLlm()
+  } catch (e) {
+    llmError.value = e.message || String(e)
+  } finally {
+    testingLlm.value = false
   }
 }
 </script>
@@ -51,36 +76,51 @@ async function testConnection() {
       <label class="full">
         {{ t.settingsApiBase }}
         <input v-model="form.apiBase" placeholder="http://127.0.0.1:8000" />
+        <span class="field-hint">{{ t.settingsApiBaseHint }}</span>
       </label>
       <label class="full">
         {{ t.settingsApiKey }}
-        <input v-model="form.apiKey" type="password" autocomplete="off" placeholder="sk-..." />
+        <input v-model="form.apiKey" type="password" autocomplete="off" placeholder="sk-or-..." />
       </label>
       <label class="full">
         {{ t.settingsOpenaiBase }}
-        <input v-model="form.openaiBaseUrl" placeholder="https://api.openai.com/v1" />
+        <input v-model="form.openaiBaseUrl" placeholder="https://openrouter.ai/api/v1" />
+        <span class="field-hint">{{ t.settingsOpenaiBaseHint }}</span>
       </label>
       <label class="full">
         {{ t.settingsModel }}
-        <input v-model="form.model" placeholder="gpt-4o-mini" />
+        <input v-model="form.model" placeholder="google/gemma-2-9b-it:free" />
       </label>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn btn-ghost" type="button" @click="applyOpenRouterPreset">
+        {{ t.settingsOpenRouterPreset }}
+      </button>
     </div>
 
     <p class="filter-hint">{{ t.settingsHint }}</p>
 
     <div class="cta-row">
       <button class="btn btn-primary" type="button" @click="save">{{ t.settingsSave }}</button>
-      <button class="btn btn-ghost" type="button" :disabled="testing" @click="testConnection">
-        {{ testing ? t.settingsTesting : t.settingsTest }}
+      <button class="btn btn-ghost" type="button" :disabled="testing" @click="testBackend">
+        {{ testing ? t.settingsTesting : t.settingsTestBackend }}
+      </button>
+      <button class="btn btn-ghost" type="button" :disabled="testingLlm" @click="testLlm">
+        {{ testingLlm ? t.settingsTesting : t.settingsTestLlm }}
       </button>
     </div>
 
     <p v-if="savedMsg" class="filter-hint" style="color: var(--accent-deep)">{{ savedMsg }}</p>
     <p v-if="testError" class="error-box" style="margin-top: 1rem">{{ testError }}</p>
+    <p v-if="llmError" class="error-box" style="margin-top: 1rem">{{ llmError }}</p>
     <div v-if="health" class="panel" style="margin-top: 1rem; box-shadow: none">
       <p class="answer">
-        status={{ health.status }} · cards={{ health.card_count }} · llm={{ health.has_llm }}
+        Backend OK · cards={{ health.card_count }} · llm_key_detected={{ health.has_llm }}
       </p>
+    </div>
+    <div v-if="llmTest" class="panel" style="margin-top: 1rem; box-shadow: none">
+      <p class="answer">LLM OK · sample: {{ llmTest.provider_sample }}</p>
     </div>
   </section>
 </template>

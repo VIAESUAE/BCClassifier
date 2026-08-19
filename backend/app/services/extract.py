@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import List, Tuple
 
@@ -8,7 +7,8 @@ import httpx
 
 from app.schemas import CardFields
 from app.services.geo import enrich_card_geo
-from app.services.llm_runtime import effective_api_key, effective_base_url, effective_model, has_llm
+from app.services.llm_client import chat_completion, parse_json_object
+from app.services.llm_runtime import has_llm
 
 EXTRACT_SYSTEM = """You extract structured fields from business card OCR text.
 Return ONLY valid JSON matching this schema:
@@ -26,12 +26,15 @@ Return ONLY valid JSON matching this schema:
   "notes": string|null
 }
 Rules:
+- Ignore marketing slogans, taglines, and calls-to-action (e.g. "In Legal Trouble?", "Call Now!", "Better Call Saul!").
+- full_name must be a person's name (e.g. "Saul Goodman"), NOT a slogan or question.
+- company is an organization name, NOT a catchphrase.
+- title is a job title (e.g. "Attorney at Law", "VP Sales"), not advertising copy.
+- Prefer lines that look like contact info; skip decorative or promotional text.
 - Infer country from address, city, or phone country code when possible.
-- timezone MUST be an IANA name when known (e.g. Asia/Singapore, America/New_York, Europe/London).
-- region: city or metro label (e.g. "Bay Area", "New York", "Singapore").
-- geo_zone: classify from address/country into exactly one of:
-  APAC (Asia-Pacific), NA (North America), LATAM (Latin America), EU (Europe), MEA (Middle East & Africa).
-- tags: short industry labels like "payments", "fintech", "cloud services", "hardware", "legal", "retail", "logistics".
+- timezone: IANA name when known (e.g. America/Los_Angeles, Asia/Singapore).
+- geo_zone: APAC | NA | LATAM | EU | MEA from address/country.
+- tags: short industry labels (payments, legal, cloud services, retail, etc.).
 - If unsure, use null / []. Do not invent phone/email.
 """
 
@@ -42,12 +45,43 @@ def extract_fields(ocr_text: str) -> Tuple[CardFields, List[str]]:
         try:
             fields = _llm_extract(ocr_text)
             return _finalize(fields, ocr_text), warnings
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+            detail = exc.response.text[:300]
+            warnings.append(f"LLM API error {code}: {detail}")
+            if code in (401, 403):
+                warnings.append(
+                    "API Key 未授权。OpenRouter 请确认：Base URL = https://openrouter.ai/api/v1，"
+                    "Key 来自 openrouter.ai，模型名如 google/gemma-2-9b-it:free"
+                )
+            warnings.append("未能自动抽取字段，请根据 OCR 文本手动填写（未使用离线规则乱填）。")
+            return _finalize(_empty_fields(), ocr_text), warnings
         except Exception as exc:  # noqa: BLE001
-            warnings.append(f"LLM extract failed, using heuristics: {exc}")
+            warnings.append(f"LLM extract failed: {exc}")
+            warnings.append("请手动填写字段，或到「设置」检查 OpenRouter 配置。")
+            return _finalize(_empty_fields(), ocr_text), warnings
+
     fields = _heuristic_extract(ocr_text)
-    if not fields.full_name:
+    warnings.append("未配置 LLM Key，使用离线规则抽取（精度有限，建议到「设置」填入 OpenRouter）。")
+    if not fields.full_name or fields.full_name == "待手动填写":
         warnings.append("Could not confidently detect a name; please edit before saving.")
     return _finalize(fields, ocr_text), warnings
+
+
+def _empty_fields() -> CardFields:
+    return CardFields(
+        full_name="待手动填写",
+        company=None,
+        title=None,
+        phone=None,
+        email=None,
+        country=None,
+        timezone=None,
+        region=None,
+        geo_zone=None,
+        tags=[],
+        notes=None,
+    )
 
 
 def _finalize(fields: CardFields, ocr_text: str) -> CardFields:
@@ -71,24 +105,17 @@ def _finalize(fields: CardFields, ocr_text: str) -> CardFields:
 
 
 def _llm_extract(ocr_text: str) -> CardFields:
-    payload = {
-        "model": effective_model(),
-        "temperature": 0,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": EXTRACT_SYSTEM},
-            {"role": "user", "content": f"OCR text:\n{ocr_text}"},
-        ],
-    }
-    headers = {
-        "Authorization": f"Bearer {effective_api_key()}",
-        "Content-Type": "application/json",
-    }
-    with httpx.Client(base_url=effective_base_url(), timeout=60.0) as client:
-        resp = client.post("/chat/completions", headers=headers, json=payload)
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-    data = json.loads(content)
+    messages = [
+        {"role": "system", "content": EXTRACT_SYSTEM},
+        {"role": "user", "content": f"OCR text:\n{ocr_text}"},
+    ]
+    try:
+        content = chat_completion(messages, temperature=0, json_mode=True)
+    except httpx.HTTPStatusError:
+        raise
+    except Exception:
+        content = chat_completion(messages, temperature=0, json_mode=False)
+    data = parse_json_object(content)
     return CardFields.model_validate(data)
 
 
@@ -106,43 +133,45 @@ def _heuristic_extract(ocr_text: str) -> CardFields:
             if m and "@" not in ln:
                 phone = m.group(0).strip()
 
-    full_name = lines[0] if lines else "Unknown"
+    # Skip obvious slogans for name guess
+    def looks_like_name(ln: str) -> bool:
+        if "?" in ln or "!" in ln and len(ln.split()) <= 4:
+            return False
+        if ln.isupper() and len(ln) > 28:
+            return False
+        words = ln.split()
+        return 2 <= len(words) <= 4 and not any(w.lower() in ("call", "better", "now") for w in words[:1])
+
+    full_name = "待手动填写"
+    for ln in lines[:8]:
+        if looks_like_name(ln):
+            full_name = ln
+            break
+    if full_name == "待手动填写" and lines:
+        full_name = lines[0][:255]
+
     company = None
     title = None
-    for ln in lines[1:6]:
+    for ln in lines:
         lower = ln.lower()
         if email and email in ln:
             continue
         if phone and phone in ln:
             continue
-        if any(k in lower for k in ("inc", "llc", "corp", "ltd", "labs", "capital", "pay", "bank")):
-            company = company or ln
-        elif any(k in lower for k in ("ceo", "cto", "vp", "director", "manager", "partner", "engineer", "founder")):
+        if any(k in lower for k in ("attorney", "lawyer", "ceo", "cto", "vp", "director", "manager", "partner", "engineer", "founder", "at law")):
             title = title or ln
-        elif company is None and "@" not in ln:
-            company = ln
+        elif any(k in lower for k in ("inc", "llc", "corp", "ltd", "labs", "capital", "pay", "bank")):
+            company = company or ln
 
     blob = ocr_text.lower()
     tags: List[str] = []
     tag_map = {
         "payment": "payments",
-        "payments": "payments",
         "fintech": "fintech",
-        "fund": "fund bridging",
-        "bridge": "fund bridging",
-        "venture": "venture capital",
-        "crypto": "crypto",
-        "bank": "banking",
-        "cloud": "cloud services",
-        "aws": "cloud services",
-        "azure": "cloud services",
-        "hardware": "hardware",
-        "semiconductor": "hardware",
         "legal": "legal",
         "law": "legal",
+        "cloud": "cloud services",
         "retail": "retail",
-        "logistics": "logistics",
-        "shipping": "logistics",
     }
     for key, tag in tag_map.items():
         if key in blob and tag not in tags:

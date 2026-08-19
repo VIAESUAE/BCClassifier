@@ -12,6 +12,7 @@ from app.db import BusinessCard
 from app.routers import cards, ingest, rag
 from app.schemas import HealthResponse
 from app.seed import seed_if_empty
+from app.services.llm_client import ping_llm
 from app.services.llm_runtime import has_llm, set_request_llm_overrides
 
 
@@ -74,6 +75,23 @@ def create_app() -> FastAPI:
             has_llm=has_llm() or settings.has_llm,
             card_count=count,
         )
+
+    @app.get("/health/llm-test")
+    def health_llm_test():
+        if not has_llm():
+            from fastapi import HTTPException
+
+            raise HTTPException(
+                status_code=400,
+                detail="No LLM API key. Set OPENAI_API_KEY on the server or paste key in Settings.",
+            )
+        try:
+            sample = ping_llm()
+            return {"ok": True, "provider_sample": sample}
+        except Exception as exc:  # noqa: BLE001
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return app
 

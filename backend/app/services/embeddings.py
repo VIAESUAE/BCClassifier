@@ -8,7 +8,8 @@ import httpx
 import numpy as np
 
 from app.config import get_settings
-from app.services.llm_runtime import effective_api_key, effective_base_url, has_llm
+from app.services.llm_client import llm_headers
+from app.services.llm_runtime import effective_base_url, has_llm
 
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
@@ -29,10 +30,7 @@ def embed_query(text: str) -> List[float]:
 
 def _openai_embed(texts: List[str]) -> List[List[float]]:
     settings = get_settings()
-    headers = {
-        "Authorization": f"Bearer {effective_api_key()}",
-        "Content-Type": "application/json",
-    }
+    headers = llm_headers()
     payload = {"model": settings.embedding_model, "input": texts}
     with httpx.Client(base_url=effective_base_url(), timeout=60.0) as client:
         resp = client.post("/embeddings", headers=headers, json=payload)

@@ -30,12 +30,17 @@ function apiBase() {
   return (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 }
 
+const OPENROUTER_DEFAULT_BASE = 'https://openrouter.ai/api/v1'
+const OPENROUTER_DEFAULT_MODEL = 'google/gemma-2-9b-it:free'
+
 function authHeaders() {
   const s = getClientSettings()
   const headers = {}
-  if (s.apiKey) headers['X-OpenAI-Api-Key'] = s.apiKey
-  if (s.openaiBaseUrl) headers['X-OpenAI-Base-Url'] = s.openaiBaseUrl
-  if (s.model) headers['X-OpenAI-Model'] = s.model
+  if (s.apiKey) {
+    headers['X-OpenAI-Api-Key'] = s.apiKey
+    headers['X-OpenAI-Base-Url'] = (s.openaiBaseUrl || OPENROUTER_DEFAULT_BASE).replace(/\/$/, '')
+    headers['X-OpenAI-Model'] = s.model || OPENROUTER_DEFAULT_MODEL
+  }
   return headers
 }
 
@@ -81,4 +86,5 @@ export const api = {
       body: JSON.stringify({ query, top_k: topK }),
     }),
   fileUrl: (path) => `${apiBase()}${path}`,
+  testLlm: () => request('/health/llm-test'),
 }

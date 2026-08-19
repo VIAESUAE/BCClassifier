@@ -13,7 +13,8 @@ from app.db import BusinessCard
 from app.schemas import CardOut, RagHit, RagQueryResponse
 from app.services.card_present import card_to_out
 from app.services.embeddings import embed_query
-from app.services.llm_runtime import effective_api_key, effective_base_url, effective_model, has_llm
+from app.services.llm_client import chat_completion
+from app.services.llm_runtime import has_llm
 
 WEST_COAST_HINTS = ("west coast", "bay area", "san francisco", "seattle", "los angeles", "california", "pst", "pdt")
 EAST_COAST_HINTS = ("east coast", "new york", "nyc", "boston", "est", "edt")
@@ -236,22 +237,14 @@ def _llm_answer(query: str, hits: List[RagHit]) -> str:
         "Cite names and companies. If nothing fits, say so. Be concise."
     )
     user = f"Question: {query}\n\nContacts JSON:\n{json.dumps(payload_cards, ensure_ascii=False)}"
-    headers = {
-        "Authorization": f"Bearer {effective_api_key()}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": effective_model(),
-        "temperature": 0.2,
-        "messages": [
+    return chat_completion(
+        [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-    }
-    with httpx.Client(base_url=effective_base_url(), timeout=60.0) as client:
-        resp = client.post("/chat/completions", headers=headers, json=body)
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        temperature=0.2,
+        json_mode=False,
+    )
 
 
 def find_dedupe_hits(db: Session, email: Optional[str], phone: Optional[str]) -> List[CardOut]:

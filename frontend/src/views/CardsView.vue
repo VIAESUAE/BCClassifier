@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { api } from '../api/client'
+import EmailTimelineOverlay from '../components/EmailTimelineOverlay.vue'
+import { isKimDemoCard } from '../data/kimTimeline'
 import { useI18n } from '../i18n'
 import { zonesForLocale } from '../markets'
 
@@ -10,6 +12,7 @@ const error = ref('')
 const geoZone = ref('')
 const place = ref('')
 const tick = ref(0)
+const timelineOpen = ref(false)
 let timer = null
 
 const zones = computed(() => zonesForLocale(locale.value))
@@ -33,6 +36,10 @@ async function loadCards() {
 function onZoneChange() {
   place.value = ''
   loadCards()
+}
+
+function onCardClick(card) {
+  if (isKimDemoCard(card)) timelineOpen.value = true
 }
 
 function localLabel(card) {
@@ -95,10 +102,17 @@ onUnmounted(() => {
     <p v-else-if="!cards.length" class="empty">{{ t.emptyCards }}</p>
 
     <div class="hit-list">
-      <article v-for="card in cards" :key="card.id" class="hit">
+      <article
+        v-for="card in cards"
+        :key="card.id"
+        class="hit"
+        :class="{ 'hit--demo': isKimDemoCard(card) }"
+        @click="onCardClick(card)"
+      >
         <div class="hit-head">
           <h3>{{ card.full_name }}</h3>
-          <span v-if="card.geo_zone" class="tag">{{ card.geo_zone }}</span>
+          <span v-if="isKimDemoCard(card)" class="tag tag-demo">{{ t.kimDemoBadge }}</span>
+          <span v-else-if="card.geo_zone" class="tag">{{ card.geo_zone }}</span>
         </div>
         <p class="meta">
           {{ card.title || '—' }} · {{ card.company || '—' }} · {{ card.email || t.noEmail }}
@@ -114,4 +128,6 @@ onUnmounted(() => {
       </article>
     </div>
   </section>
+
+  <EmailTimelineOverlay :open="timelineOpen" @close="timelineOpen = false" />
 </template>

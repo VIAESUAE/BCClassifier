@@ -26,8 +26,8 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_BASE_URL
-        sync: false
+        value: https://openrouter.ai/api/v1
       - key: OPENAI_MODEL
-        value: gpt-4o-mini
+        value: google/gemma-2-9b-it:free
       - key: PYTHON_VERSION
         value: "3.11.9"

@@ -94,13 +94,16 @@ Optional: Dify HTTP node → same `/rag/query` ([dify/](dify/)).
 
 See [.env.example](.env.example). Without `OPENAI_API_KEY`, heuristic extract + deterministic hash embeddings still run the demo end-to-end.
 
+**OpenRouter (free models):** set `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and a model like `google/gemma-2-9b-it:free`. In the UI **Settings**, use **Test LLM** — not just health — before scanning cards.
+
 ## Public deploy (GitHub Pages + Render)
 
-Yes — this project can go online as a **synthetic-data demo**:
+Push to `main` redeploys both. Configure once on Render:
 
-- Backend → Render (`render.yaml`)
-- Frontend → GitHub Pages (`.github/workflows/deploy-pages.yml`)
+- `OPENAI_API_KEY` — from [openrouter.ai/keys](https://openrouter.ai/keys)
+- `OPENAI_BASE_URL` — `https://openrouter.ai/api/v1` (already in `render.yaml`)
+- GitHub Secret `VITE_API_BASE` — your Render API URL
 
-See [scripts/PUBLIC_DEMO.md](scripts/PUBLIC_DEMO.md) for the checklist.
+Full checklist: [scripts/PUBLIC_DEMO.md](scripts/PUBLIC_DEMO.md). **Do not** put the backend URL (`127.0.0.1:8000`) in the LLM Base URL field.
 
 Never upload real business cards to the public stack.
